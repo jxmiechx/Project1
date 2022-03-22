@@ -1,34 +1,54 @@
-# server.py
+from cryptography.fernet import Fernet
+import socket
+import os
 
-import socket                   # Import socket module
+def Main():
+    host = '127.0.0.1'
+    port = 8881
 
-port = 60000                    # Reserve a port for your service.
-s = socket.socket()             # Create a socket object
-host = '127.0.0.1'
-#host = socket.gethostname()     # Get local machine name
-s.bind((host, port))            # Bind to the port
-s.listen(5)                     # Now wait for client connection.
+    s = socket.socket()
+    s.bind((host,port))
+    print("Server", host, "waiting on port", port)
+    s.listen(1)
+    while True:
+        c, addr = s.accept()
+        print("Connected to: " + str(addr))
+        filename = ''
+        while True:
+            data = c.recv(1024).decode('utf-8')
+            if not data:
+                break
+            filename += data
+        print("---------------------------") #making it easier to read on terminal
+        print("File requested: " + filename)
+        if os.path.isfile(filename):
+            file2send = open(filename, "rb")
 
-print ('Server listening....')
+            key = 'EUcs56-cMCveCXMgxiMxXI9uzUFmaHuqnmQX99PUm-U='
 
-while True:
-    conn, addr = s.accept()     # Establish connection with client.
-    print ('Got connection from', addr)
-    data = conn.recv(1024)
-    print('Server received', repr(data))
+#Encrypting - binds hardcoded key to 'f'
+            f = Fernet(key)
 
-    filename='mytext.txt'   #client should specify
-    f = open(filename,'rb')
-    l = f.read(1024)
+            with open(filename, 'rb') as original_file:
+                original = original_file.read()
+
+            encrypted = f.encrypt(original)
+
+            with open("encrypted_" + filename, 'wb') as encrypted_file:
+                encrypted_file.write(encrypted)
+
+            c.send(file2send.read())
+            c.close()
+            print("--ENCRYPTED FILE SENT TO CLIENT--")
+            break
+
+        else:
+            print("File not found")
+            msg = ('File not found')
+            break
+            #s.send(msg.encode('utf-8'))
+            
+
+if __name__ == '__main__':
+    Main()
     
-    #encrypt
-
-    while (l):
-       conn.send(l)
-       print('Sent ',repr(l))
-       l = f.read(1024)
-    f.close()
-
-    print('Done sending')
-    conn.send('Thank you for connecting')
-    conn.close()
