@@ -1,31 +1,48 @@
-# client.py
+from cryptography.fernet import Fernet
+import socket, os.path, datetime, sys, pickle
 
-import socket                   # Import socket module
+def Main():
+    host = '127.0.0.1'
+    port = 8881
 
-s = socket.socket()             # Create a socket object
-host = '127.0.0.1'
-#host = socket.gethostname()     # Get local machine name
-port = 60000                    # Reserve a port for your service.
+    s = socket.socket()
+    s.connect((host, port))
 
-s.connect((host, port))
-s.send(b"Hello server!")
+    #Hardcoded Encryption Key
+    key = 'EUcs56-cMCveCXMgxiMxXI9uzUFmaHuqnmQX99PUm-U='
 
-#hardcode key
-
-
-with open('received_file', 'wb') as f:
-    print ('file opened')
-    while True:
-        print('receiving data...')
-        data = s.recv(1024)
+    print("--------------------------------------")
+    Filename = input("Request the name of a file: ")
+    s.send(Filename.encode('utf-8'))
+    s.shutdown(socket.SHUT_WR)
+    data = s.recv(1024).decode('utf-8')
+    with open('received_file', 'wb') as f:
+            print ('--FILE FOUND--')
+            while True:
+                print('receiving data...')
+                data = s.recv(1024)
         #decrypt
-        print('data=%s', (data))
-        if not data:
-            break
+                print('data=%s', (data))
+                if not data:
+                    break
         # write data to a file
-        f.write(data)
+            f.write(data)
 
-f.close()
-print('Successfully get the file')
-s.close()
-print('connection closed')
+            f.close()
+
+    f = Fernet(key)
+
+    with open("encrypted_" + Filename, 'rb') as encrypted_file:
+        encrypted = encrypted_file.read()
+
+    decrypted = f.decrypt(encrypted)
+
+    with open("decrypted_" + Filename, 'wb') as decrypted_file:
+        decrypted_file.write(decrypted)
+
+    print('--REQUESTED FILE RECEIVED--')
+    s.close()
+    s.close()
+
+if __name__ == '__main__':
+    Main()
